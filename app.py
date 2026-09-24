@@ -10,28 +10,16 @@ def get_transcript():
         return jsonify({"error": "Missing video_id"}), 400
     
     try:
-        # 獲取該影片所有可用的字幕清單
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        # 💡 核心手術：退回最穩定的語法，並賦予它尋找多區英文與「自動生成字幕」的能力
+        langs = ['en', 'en-US', 'en-GB', 'en-CA', 'en-AU']
+        transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=langs)
         
-        try:
-            # 優先 1：尋找手動建立的英文或各區英文 (美式、英式、加式、澳式)
-            transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB', 'en-CA', 'en-AU'])
-        except:
-            try:
-                # 優先 2：如果沒有手動上傳的，嘗試尋找 YouTube AI 自動生成的英文
-                transcript = transcript_list.find_generated_transcript(['en'])
-            except:
-                # 優先 3 (大絕招)：如果完全沒有英文，隨便抓一個現有語言，直接呼叫 YouTube 內建翻譯轉成英文！
-                for t in transcript_list:
-                    transcript = t.translate('en')
-                    break
-                    
         # 將找到的字幕陣列，組裝成一大串純文字
-        transcript_data = transcript.fetch()
         text = " ".join([item['text'] for item in transcript_data])
         return jsonify({"transcript": text})
         
     except Exception as e:
+        # 如果真的完全沒有任何英文字幕，將錯誤回傳給 WordPress
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
